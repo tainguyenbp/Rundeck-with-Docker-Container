@@ -1,0 +1,72 @@
+version: '2'
+services:
+
+  rundeckwebservice:
+    restart: always
+    image: rundeck/rundeck:3.2.5
+    container_name: rundeckwebservice
+    ports:
+      - 4440:4440
+    tty: true
+    environment:
+      - RUNDECK_GRAILS_URL=http://0.0.0.0:4440
+      - RUNDECK_SERVER_ADDRESS=0.0.0.0
+      - RUNDECK_DATABASE_DRIVER=com.mysql.jdbc.Driver
+      - DATABASE_URL=jdbc:mysql://mysql:3306/rundeck?autoReconnect=true
+      - RUNDECK_DATABASE_USERNAME=rundeck
+      - RUNDECK_DATABASE_PASSWORD=Us3r@rUnd3ck@RunRecK
+    links:
+      - mysqlrundeck
+    depends_on:
+      - mysqlrundeck
+    volumes:
+      - ./data/projects:/var/rundeck/projects:rw
+      - ./data/keys:/var/lib/rundeck_ssh:ro
+    networks:
+      - rundeck-mysql-network
+
+  mysqlrundeck:
+    restart: always
+    image: mysql:5.7
+    container_name: mysqlrundeck
+    environment:
+      - MYSQL_ROOT_PASSWORD=R00t@rUnd3ck@RunRecK
+      - MYSQL_DATABASE=rundeck
+      - MYSQL_USER=rundeck
+      - MYSQL_PASSWORD=Us3r@rUnd3ck@RunRecK
+    volumes:
+      - ./data/mysql:/var/lib/mysql:rw
+    expose:
+      - 3306
+    networks:
+      - rundeck-mysql-network
+
+  # nginxrundeck:
+  #   image: nginx
+  #   container_name: nginxrundeck
+  #   links:
+  #     - rundeckwebservice
+  #     - phpmyadminrundeck
+  #   volumes:
+  #     - ./data/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #   ports:
+  #     - 80:80
+  #   networks:
+  #     - rundeck-mysql-network    
+
+  phpmyadminrundeck:
+    image: phpmyadmin/phpmyadmin:5.0.2
+    container_name: phpmyadminrundeck
+    restart: always
+    ports:
+      - 0.0.0.0:8181:80
+    links:
+      - mysqlrundeck
+    environment:
+      - PMA_HOST=mysqlrundeck
+    networks:
+      - rundeck-mysql-network
+
+networks:
+  rundeck-mysql-network:
+    driver: bridge
